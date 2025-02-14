@@ -10,6 +10,9 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        colors: {
+          customYellow: 'rgb(165, 116, 0)', // Add the custom color here
+        },
       },
     },
   },
