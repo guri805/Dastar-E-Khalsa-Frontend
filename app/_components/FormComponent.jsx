@@ -1,8 +1,14 @@
-'use client'
-import axios from 'axios';
-import { useState } from 'react';
+'use client';
+import { useRouter } from 'next/navigation';
+import { useActionState } from 'react';
+import { ParticipantValidation } from '../action/participantValidation';
+import { useState, useEffect } from 'react';
 
 const FormComponent = () => {
+    const router = useRouter();
+    const [state, action, pending] = useActionState(ParticipantValidation, undefined);
+    const errors = state?.errors;
+
     const [formData, setFormData] = useState({
         fullName: '',
         age: '',
@@ -17,92 +23,6 @@ const FormComponent = () => {
         group: '',
     });
 
-    const fields = [
-        {
-            label: "ਨਾਮ (NAME)",
-            type: "text",
-            name: "fullName",
-            value: formData.fullName,
-            required: true,
-        },
-        {
-            label: "ਉਮਰ (AGE)",
-            type: "text",
-            name: "age",
-            value: formData.age,
-            required: true,
-        },
-        {
-            label: "ਲਿੰਗ (GENDER)",
-            type: "radio",
-            name: "gender",
-            options: [
-                "Male",
-                "Female"
-            ],
-            value: formData.gender,
-            required: true,
-        },
-        {
-            label: "ਪਿਤਾ ਦਾ ਨਾਮ (FATHER'S NAME)",
-            type: "text",
-            name: "fatherName",
-            value: formData.fatherName,
-            required: true,
-        },
-        {
-            label: "ਪਤਾ (ADDRESS)",
-            type: "text",
-            name: "address",
-            value: formData.address,
-            required: true,
-        },
-        {
-            label: "ਗ੍ਰਾਮ (HOMETOWN)",
-            type: "text",
-            name: "hometown",
-            value: formData.hometown,
-            required: true,
-        },
-        {
-            label: "ਵਟਸਐਪ ਨੰਬਰ (WHATSAPP NUMBER)",
-            type: "tel",
-            name: "whatsappNumber",
-            value: formData.whatsappNumber,
-            required: true,
-        },
-        {
-            label: "ਈਮੇਲ (EMAIL)",
-            type: "email",
-            name: "email",
-            value: formData.email,
-            required: true,
-        },
-        {
-            label: "ਸਕੂਲ ਅਤੇ ਕਾਲਜ (SCHOOL & COLLEGE)",
-            type: "text",
-            name: "schoolOrCollege",
-            value: formData.schoolOrCollege,
-            required: true,
-        },
-        {
-            label: "ਮੁਕਾਬਲਾ (COMPETITION)",
-            type: "radio",
-            name: "competition",
-            options: ["Turban", "Dumala"],
-            value: formData.competition,
-            required: true,
-        },
-        {
-            label: "ਗਰੁੱਪ (Group)",
-            type: "radio",
-            name: "group",
-            options: ["Junior", "Senior", "Expert"],
-            value: formData.group,
-            required: true,
-        }
-    ];
-
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData((prevData) => ({
@@ -111,126 +31,87 @@ const FormComponent = () => {
         }));
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        console.log("FormData submitted:", formData);
-
-        try {
-            // First, create or fetch the category based on competition
-            const categoryResponse = await axios.post("http://localhost:3001/category", {
-                competition: formData.competition,
+    // Reset form when submission is successful
+    useEffect(() => {
+        if (state?.success) {
+            setFormData({
+                fullName: '',
+                age: '',
+                gender: '',
+                fatherName: '',
+                address: '',
+                hometown: '',
+                whatsappNumber: '',
+                email: '',
+                schoolOrCollege: '',
+                competition: '',
+                group: '',
             });
-
-            // Check if the category was created or fetched successfully
-            if (categoryResponse.data.success) {
-                console.log("Category created or already exists:", categoryResponse.data.category);
-
-                // Create or fetch the subcategory (group)
-                const subcategoryResponse = await axios.post("http://localhost:3001/subcategory", {
-                    categoryId: categoryResponse.data.category._id, // Send category ID to create subcategory
-                    group: formData.group, // Send the group (Junior, Senior, Expert)
-                });
-
-                // Check if subcategory was created or fetched successfully
-                if (subcategoryResponse.data.success) {
-                    console.log("Subcategory created or already exists:", subcategoryResponse.data.subcategory);
-
-                    // Now, create the participant with the categoryId and subcategoryId
-                    const response = await axios.post("http://localhost:3001/particantdata", {
-                        ...formData,
-                        categoryId: categoryResponse.data.category._id, // Send the categoryId
-                        subcategoryId: subcategoryResponse.data.subcategory._id, // Send the subcategoryId
-                    });
-
-                    // Check if the participant was successfully created
-                    if (response.data.success) {
-                        alert("Form submitted successfully!");
-                        setFormData({
-                            fullName: '',
-                            age: '',
-                            gender: '',
-                            fatherName: '',
-                            address: '',
-                            hometown: '',
-                            whatsappNumber: '',
-                            email: '',
-                            schoolOrCollege: '',
-                            competition: '',
-                            group: '',
-                        });
-                    } else {
-                        alert("Error submitting form. Please try again.");
-                    }
-                } else {
-                    alert("Error creating subcategory. Please try again.");
-                }
-            } else {
-                alert("Error creating category. Please try again.");
-            }
-        } catch (error) {
-            console.log("Error:", error.response ? error.response.data : error.message);
-            alert("Something went wrong. Please try again.");
         }
-    };
+    }, [state]);
 
     return (
-        <form onSubmit={handleSubmit}>
+        <form action={action}>
             <div className="form-data">
-                {fields.map((field, index) => (
-                    <div
-                        key={index}
-                        className="form-input flex flex-col gap-2 bg-white rounded-xl px-6 py-8 border my-4"
-                    >
-                        <label htmlFor={field.name}>
-                            <h4 className="inline">{field.label}</h4>
-                            <span className="text-red-600 ms-[1px] ">*</span>
-                        </label>
+                <label>ਨਾਮ (NAME):</label>
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required />
+                {errors?.fullName && <p className="error">{errors.fullName[0]}</p>}
 
-                        {/* Text, Number, Tel, Email Inputs */}
-                        {["text", "number", "tel", "email"].includes(field.type) && (
-                            <input
-                                type={field.type}
-                                id={field.name}
-                                name={field.name}
-                                className="border-b-2 border-gray-300 mt-2 focus:border-b-2 focus:border-colors-customYellow focus:outline-none w-[50%]"
-                                value={field.value}
-                                onChange={handleChange}
-                                required={field.required}
-                            />
-                        )}
+                <label>ਉਮਰ (AGE):</label>
+                <input type="text" name="age" value={formData.age} onChange={handleChange} required />
+                {errors?.age && <p className="error">{errors.age[0]}</p>}
 
-                        {/* Radio Buttons for Gender or Competition */}
-                        {field.type === "radio" && (
-                            <div className="flex flex-col gap-3 mt-2">
-                                {field.options.map((option, idx) => (
-                                    <label key={idx} className="inline-flex items-center">
-                                        <input
-                                            type="radio"
-                                            name={field.name}
-                                            value={option}
-                                            checked={field.value === option}
-                                            onChange={handleChange}
-                                            className="mr-2"
-                                            required={field.required}
-                                        />
-                                        {option}
-                                    </label>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                ))}
+                <label>ਲਿੰਗ (GENDER):</label>
+                <div>
+                    <input type="radio" name="gender" value="Male" checked={formData.gender === 'Male'} onChange={handleChange} required /> Male
+                    <input type="radio" name="gender" value="Female" checked={formData.gender === 'Female'} onChange={handleChange} required /> Female
+                </div>
+                {errors?.gender && <p className="error">{errors.gender[0]}</p>}
+
+                <label>ਪਿਤਾ ਦਾ ਨਾਮ (Father's Name):</label>
+                <input type="text" name="fatherName" value={formData.fatherName} onChange={handleChange} required />
+                {errors?.fatherName && <p className="error">{errors.fatherName[0]}</p>}
+
+                <label>ਪਤਾ (Address):</label>
+                <input type="text" name="address" value={formData.address} onChange={handleChange} required />
+                {errors?.address && <p className="error">{errors.address[0]}</p>}
+
+                <label>ਸ਼ਹਿਰ (Hometown):</label>
+                <input type="text" name="hometown" value={formData.hometown} onChange={handleChange} required />
+                {errors?.hometown && <p className="error">{errors.hometown[0]}</p>}
+
+                <label>WhatsApp ਨੰਬਰ (WhatsApp Number):</label>
+                <input type="text" name="whatsappNumber" value={formData.whatsappNumber} onChange={handleChange} required />
+                {errors?.whatsappNumber && <p className="error">{errors.whatsappNumber[0]}</p>}
+
+                <label>ਈਮੇਲ (Email):</label>
+                <input type="email" name="email" value={formData.email} onChange={handleChange} required />
+                {errors?.email && <p className="error">{errors.email[0]}</p>}
+
+                <label>ਸਕੂਲ ਜਾਂ ਕਾਲਜ (School or College):</label>
+                <input type="text" name="schoolOrCollege" value={formData.schoolOrCollege} onChange={handleChange} required />
+                {errors?.schoolOrCollege && <p className="error">{errors.schoolOrCollege[0]}</p>}
+
+                <label>ਮੁਕਾਬਲਾ (COMPETITION):</label>
+                <div>
+                    <input type="radio" name="competition" value="turban" checked={formData.competition === 'turban'} onChange={handleChange} required /> Turban
+                    <input type="radio" name="competition" value="dumala" checked={formData.competition === 'dumala'} onChange={handleChange} required /> Dumala
+                </div>
+                {errors?.competition && <p className="error">{errors.competition[0]}</p>}
+
+                <label>ਗਰੁੱਪ (Group):</label>
+                <div>
+                    <input type="radio" name="group" value="junior" checked={formData.group === 'junior'} onChange={handleChange} required /> Junior
+                    <input type="radio" name="group" value="senior" checked={formData.group === 'senior'} onChange={handleChange} required /> Senior
+                    <input type="radio" name="group" value="expert" checked={formData.group === 'expert'} onChange={handleChange} required /> Expert
+                </div>
+                {errors?.group && <p className="error">{errors.group[0]}</p>}
             </div>
 
-            {/* Submit Button */}
-            <div>
-                <button
-                    type="submit"
-                    className="bg-colors-customYellow text-white py-2 px-5 font-bold text-md rounded-xl mt-4"
-                >
-                    Submit
-                </button>
-            </div>
+            <button type="submit" disabled={pending}>
+                {pending ? 'Submitting...' : 'Submit'}
+            </button>
+            {state?.success && <p className="success">{state.message}</p>}
         </form>
     );
 };
